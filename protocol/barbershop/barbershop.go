@@ -1,6 +1,6 @@
-package resp
+package barbershop
 
-// Fully RESP compatible (https://redis.io/topics/protocol) protocol
+// fully barbershop (https://github.com/ngerakines/barbershop) compatible protocol handler
 
 import (
 	"bufio"
@@ -42,7 +42,6 @@ func HandleConnection(c net.Conn, queueManager chan command.Request, metrics cha
 		var replyString string
 		defaultResponseBody := ""
 		skipCommonHandler := false
-		responseTypePrefix := "+"
 		switch {
 		case strings.HasPrefix(strings.ToLower(temp), "update "):
 			// format: UPDATE key priority
@@ -77,7 +76,6 @@ func HandleConnection(c net.Conn, queueManager chan command.Request, metrics cha
 			if len(parts) == 2 {
 				commandOk = true
 				request.ItemKey = parts[1]
-				responseTypePrefix = ":"
 			}
 			if commandOk {
 				queueManager <- request
@@ -93,16 +91,13 @@ func HandleConnection(c net.Conn, queueManager chan command.Request, metrics cha
 			// format: INFO
 			replyString = ""
 			metrics <- stats.Metric{Metric: "*", Op: stats.Get, Resp: metricsResponse}
-			metricCount := 0
 			for {
 				m := <-metricsResponse
 				if m.Metric == "" {
 					break
 				}
-				metricCount++
-				replyString = fmt.Sprintf("%s$%d\r\n%s\r\n:%d\r\n", replyString, len(m.Metric), m.Metric, m.Value)
+				replyString = fmt.Sprintf("%s%s:%d\r\n", replyString, m.Metric, m.Value)
 			}
-
 			skipCommonHandler = true
 
 		case strings.ToLower(temp) == "close":
@@ -119,16 +114,15 @@ func HandleConnection(c net.Conn, queueManager chan command.Request, metrics cha
 
 			switch reply.ErrorCode {
 			case 0:
-
 				if reply.ResponseBody != "" {
-					replyString = fmt.Sprintf("%s%s\r\n", responseTypePrefix, reply.ResponseBody)
+					replyString = fmt.Sprintf("+%s\r\n", reply.ResponseBody)
 				} else {
-					replyString = fmt.Sprintf("%s%s\r\n", responseTypePrefix, defaultResponseBody)
+					replyString = fmt.Sprintf("+%s\r\n", defaultResponseBody)
 				}
 			case command.ErrQueueEmpty:
-				replyString = "$-1\r\n"
+				replyString = "+-1\r\n"
 			case command.ErrNotFound:
-				replyString = "$-1\r\n"
+				replyString = "+-1\r\n"
 			default:
 				replyString = fmt.Sprintf("-%d %s\r\n", reply.ErrorCode, reply.ErrorMessage)
 			}

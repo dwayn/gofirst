@@ -3,41 +3,45 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 
+	"github.com/akamensky/argparse"
 	"github.com/dwayn/gofirst/command"
+	"github.com/dwayn/gofirst/protocol/barbershop"
 	"github.com/dwayn/gofirst/protocol/resp"
 	"github.com/dwayn/gofirst/queue"
 	"github.com/dwayn/gofirst/stats"
 )
 
-// TODO: move these to runtime/config options
-const (
-	CONN_HOST        = "0.0.0.0"
-	CONN_PORT        = "3333"
-	CONN_TYPE        = "tcp4"
-	PROTOCOL_HANDLER = "resp"
-)
-
 func main() {
-	// arguments := os.Args
-	// if len(arguments) == 1 {
-	// 		fmt.Println("Please provide a port number!")
-	// 		return
-	// }
+	connType := "tcp4"
+	parser := argparse.NewParser("gofirst", "In memory queueing daemon, currently supports: \n\t\t\t- priority queue with in queue reprioritization")
+	host := parser.String("l", "listen", &argparse.Options{Default: "localhost", Help: "Interface to listen on"})
+	port := parser.Int("p", "port", &argparse.Options{Default: 3333, Help: "Port to listen on"})
+	protocol := parser.Selector("r", "protocol", []string{"resp", "barbershop"}, &argparse.Options{Default: "resp", Help: "Network protocol: resp, barbershop"})
 
-	// PORT := ":" + arguments[1]
+	err := parser.Parse(os.Args)
+	if err != nil {
+		// In case of error print error and print usage
+		// This can also be done by passing -h or --help flags
+		fmt.Print(parser.Usage(err))
+		return
+	}
+
 	var connectionHandler func(net.Conn, chan command.Request, chan stats.Metric)
 
-	l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
+	l, err := net.Listen(connType, fmt.Sprintf("%s:%d", *host, *port))
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	defer l.Close()
 
-	switch PROTOCOL_HANDLER {
+	switch *protocol {
 	case "resp":
 		connectionHandler = resp.HandleConnection
+	case "barbershop":
+		connectionHandler = barbershop.HandleConnection
 	}
 
 	commandChannel := queue.CreateChannel()

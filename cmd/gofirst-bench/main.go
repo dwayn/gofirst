@@ -36,7 +36,11 @@ func main() {
 
 func doWork(host string, port, items, ops int) {
 
-	conn, _ := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	readBuffer := bufio.NewReader(conn)
 	for i := 0; i < items; i++ {
 		rint := rand.Int()
