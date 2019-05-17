@@ -13,10 +13,12 @@ func RunQueue(commandQueue chan command.Request, internalQueue Queue) {
 		var reply command.Response
 		switch c.OpType {
 		case command.Update:
-			_, err := internalQueue.Update(c.ItemKey, c.ItemValue)
+			newScore, err := internalQueue.Update(c.ItemKey, c.ItemValue)
 			switch err {
 			case Ok:
 				reply.ErrorCode = command.Ok
+				reply.ResponseBody = fmt.Sprintf("%d", newScore)
+
 			default:
 				reply.ErrorCode = command.ErrUnknownError
 			}

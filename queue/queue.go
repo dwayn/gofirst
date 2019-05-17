@@ -4,7 +4,6 @@ const (
 	Ok         = 0
 	QueueEmpty = 1
 	NotFound   = 2
-	AllocError = 3 // not sure this can actually happen in go memory management, but leaving for now until sure
 )
 
 type Queue interface {

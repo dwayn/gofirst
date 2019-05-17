@@ -49,17 +49,22 @@ func HandleConnection(c net.Conn, queueManager chan command.Request, metrics cha
 			request := command.Request{OpType: command.Update, ResponseChannel: responseChannel}
 			parts := strings.Split(temp, " ")
 			commandOk := false
-			if len(parts) == 3 {
+			switch len(parts) {
+			case 3:
 				v, err := strconv.Atoi(parts[2])
 				if err == nil {
 					commandOk = true
 					request.ItemValue = v
 					request.ItemKey = parts[1]
 				}
+			case 2:
+				commandOk = true
+				request.ItemValue = 1
+				request.ItemKey = parts[1]
 			}
 			if commandOk {
 				queueManager <- request
-				defaultResponseBody = "OK"
+				responseTypePrefix = ":"
 			} else {
 				replyString = "-999 ERROR Invalid command format\r\n"
 				skipCommonHandler = true
@@ -102,7 +107,7 @@ func HandleConnection(c net.Conn, queueManager chan command.Request, metrics cha
 				metricCount++
 				replyString = fmt.Sprintf("%s$%d\r\n%s\r\n:%d\r\n", replyString, len(m.Metric), m.Metric, m.Value)
 			}
-
+			replyString = fmt.Sprintf("*%d\r\n%s", metricCount, replyString)
 			skipCommonHandler = true
 
 		case strings.ToLower(temp) == "close":

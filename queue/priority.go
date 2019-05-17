@@ -68,13 +68,11 @@ func (q *PriorityQueue) GetScore(itemId string) (int, int) {
 	return itNode.score, Ok
 }
 
-// returns 1 on adding item, 0 on  update of item
+// returns the score of the item after the update operation
 func (q *PriorityQueue) Update(itemId string, score int) (int, int) {
-	rval := 0
 	newScore := score
 	itNode := q.findItem(itemId, q.itemRoot)
 	if itNode == nil {
-		rval = 1
 		itNode = &itemTreeNode{item: &itemNode{itemId: itemId}}
 		// ########################################################################### stats.items++
 		q.Metrics <- stats.Metric{Metric: "items", Op: stats.Add, Value: 1}
@@ -102,7 +100,7 @@ func (q *PriorityQueue) Update(itemId string, score int) (int, int) {
 	// ############################################################################### stats.updates++
 	q.Metrics <- stats.Metric{Metric: "updates", Op: stats.Add, Value: 1}
 	// TODO: is there error cases here that should be returned, or is the only error that can happen in here a panic due to unable to allocate memory
-	return rval, Ok
+	return sNode.score, Ok
 }
 
 func (q *PriorityQueue) findItem(itemId string, tree *itemTreeNode) *itemTreeNode {
